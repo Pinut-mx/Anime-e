@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Guess Pro - 1980-2025</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #000000;
+            --gamedle-orange: #ff8c00;
+            --font-pixel: 'Press Start 2P', cursive;
+        }
+
+        body {
+            font-family: var(--font-pixel);
+            margin: 0;
+            background-color: var(--bg-dark);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* FONDO Y OVERLAY */
+        .background-collage {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            opacity: 0.15;
+        }
+        .background-collage img { width: 100%; height: 150px; object-fit: cover; }
+
+        .gradient-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle, transparent 0%, rgba(0,0,0,0.9) 80%, black 100%);
+        }
+
+        .container { width: 100%; max-width: 450px; text-align: center; z-index: 10; }
+
+        .header-title {
+            color: var(--gamedle-orange);
+            font-size: 22px;
+            text-shadow: 3px 3px 0px #000;
+            margin-bottom: 20px;
+        }
+
+        /* IMAGEN Y ZOOM */
+        .image-outer-wrapper {
+            position: relative;
+            width: 280px;
+            height: 380px;
+            margin: 0 auto 20px;
+            border: 4px solid #fff;
+            background: #111;
+            cursor: crosshair;
+        }
+
+        #anime-img { 
+            width: 100%; height: 100%; object-fit: cover; 
+            image-rendering: pixelated; 
+        }
+
+        .zoom-lens {
+            position: absolute;
+            width: 100px; height: 100px;
+            border: 2px solid white;
+            border-radius: 50%;
+            display: none;
+            pointer-events: none;
+            z-index: 100;
+            background-repeat: no-repeat;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        /* BUSCADOR ESTILO CAPTURA (FONDO BLANCO) */
+        .autocomplete-wrapper { position: relative; width: 90%; margin: 0 auto 15px; }
+        
+        input {
+            width: 100%; padding: 12px; font-family: Arial, sans-serif; font-size: 16px;
+            border: 2px solid #ccc; outline: none; border-radius: 4px 4px 0 0;
+        }
+
+        .autocomplete-items {
+            position: absolute; background: white; color: black;
+            width: 100%; z-index: 1000; text-align: left; font-family: Arial, sans-serif;
+            max-height: 250px; overflow-y: auto; border: 1px solid #d4d4d4;
+            border-top: none;
+        }
+
+        /* Scrollbar estilo captura */
+        .autocomplete-items::-webkit-scrollbar { width: 12px; }
+        .autocomplete-items::-webkit-scrollbar-track { background: #f1f1f1; }
+        .autocomplete-items::-webkit-scrollbar-thumb { background: #555; }
+
+        .autocomplete-items div { 
+            padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 14px;
+        }
+        .autocomplete-items div:hover { background-color: #e9e9e9; }
+
+        /* BOTONES */
+        .button-group { display: flex; justify-content: center; gap: 10px; }
+        .btn {
+            font-family: var(--font-pixel); font-size: 10px; padding: 15px 20px;
+            border: 3px solid #000; border-radius: 4px; cursor: pointer; color: white;
+        }
+        .btn-omit { background: linear-gradient(to bottom, #ff8c00, #e65c00); }
+        .btn-guess { background: linear-gradient(to bottom, #0099ff, #0066cc); flex-grow: 0.5; }
+
+        .hearts { color: #ff4757; font-size: 20px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="background-collage" id="bg-collage"></div>
+    <div class="gradient-overlay"></div>
+
+    <div class="container">
+        <h1 class="header-title">ANIME GUESS</h1>
+        <div id="message" style="font-size: 10px; height: 15px; margin-bottom: 10px;"></div>
+        
+        <div class="image-outer-wrapper" id="zoom-area">
+            <div class="zoom-lens" id="zoom-lens"></div>
+            <img id="anime-img" src="" alt="">
+        </div>
+
+        <div class="autocomplete-wrapper">
+            <input id="myInput" type="text" placeholder="BUSCAR ANIME..." autocomplete="off">
+            <div id="autocomplete-list" class="autocomplete-items"></div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn btn-omit" onclick="nextLevel()">OMITIR</button>
+            <button class="btn btn-guess" onclick="checkGuess()">ADIVINAR</button>
+        </div>
+
+        <div class="lives-container">
+            <div class="hearts" id="hearts-display">❤️❤️❤️❤️❤️❤️</div>
+            <p style="font-size: 8px; color: #888; margin-top: 5px;" id="status-text">6 VIDAS RESTANTES</p>
+        </div>
+    </div>
+
+    <script>
+        // Aquí puedes añadir miles de nombres. 
+        // He incluido una muestra representativa de cada década (80s, 90s, 00s, 10s, 20s)
+        const animeList = [
+            "Dragon Ball Z", "Akira", "Saint Seiya", "Captain Tsubasa", "Hokuto no Ken",
+            "Neon Genesis Evangelion", "Cowboy Bebop", "Sailor Moon", "Slam Dunk", "YuYu Hakusho",
+            "Naruto Shippuden", "One Piece", "Bleach", "Death Note", "Fullmetal Alchemist",
+            "Attack on Titan", "Hunter x Hunter", "Steins;Gate", "Code Geass", "Toradora",
+            "Demon Slayer: Kimetsu no Yaiba", "Jujutsu Kaisen", "Chainsaw Man", "Spy x Family", "Oshi no Ko",
+            "Solo Leveling", "Dandadan", "Kaiju No. 8", "Frieren: Beyond Journey's End", "Blue Lock",
+            "Pokemon Blue", "Pokemon Alpha Sapphire", "Pokemon Black version", "Pokemon Cafe Mix",
+            "My Hero Academia", "Black Clover", "Tokyo Ghoul", "Haikyuu!!", "One Punch Man"
+            // ... imagina aquí 3000 nombres más
+        ];
+
+        // Imágenes reales para el juego (usando CDN estable)
+        const gameData = [
+            { name: "Pokemon Alpha Sapphire", img: "https://files.catbox.moe/u6l252.jpg" },
+            { name: "Dragon Ball Z", img: "https://files.catbox.moe/p94atp.jpg" },
+            { name: "One Piece", img: "https://files.catbox.moe/j0g5sh.jpg" },
+            { name: "Akira", img: "https://files.catbox.moe/u8uuzq.jpg" },
+            { name: "Evangelion", img: "https://files.catbox.moe/2s9o1c.jpg" }
+        ];
+
+        let currentAnime;
+        let lives = 6;
+        let gameOver = false;
+
+        const input = document.getElementById("myInput");
+        const listContainer = document.getElementById("autocomplete-list");
+        const animeImg = document.getElementById("anime-img");
+        const lens = document.getElementById("zoom-lens");
+        const zoomArea = document.getElementById("zoom-area");
+
+        // BUSCADOR AVANZADO (Estilo tu captura)
+        input.addEventListener("input", function() {
+            if(gameOver) return;
+            const val = this.value.toLowerCase();
+            listContainer.innerHTML = "";
+            if (!val) return;
+
+            // Filtramos la lista de miles de animes
+            const matches = animeList.filter(name => name.toLowerCase().includes(val)).slice(0, 10);
+
+            matches.forEach(name => {
+                const div = document.createElement("div");
+                // Resaltar en negrita la parte coincidente
+                const start = name.toLowerCase().indexOf(val);
+                const part1 = name.substr(0, start);
+                const part2 = name.substr(start, val.length);
+                const part3 = name.substr(start + val.length);
+                
+                div.innerHTML = `${part1}<strong>${part2}</strong>${part3}`;
+                
+                div.onclick = () => {
+                    input.value = name;
+                    listContainer.innerHTML = "";
+                };
+                listContainer.appendChild(div);
+            });
+        });
+
+        // ZOOM FUNCIONAL
+        zoomArea.addEventListener("mousemove", (e) => {
+            if(gameOver) return;
+            lens.style.display = "block";
+            const rect = zoomArea.getBoundingClientRect();
+            let x = e.clientX - rect.left;
+            let y = e.clientY - rect.top;
+
+            lens.style.left = (x - 50) + "px";
+            lens.style.top = (y - 50) + "px";
+            lens.style.backgroundImage = `url(${currentAnime.img})`;
+            lens.style.backgroundSize = (rect.width * 2) + "px " + (rect.height * 2) + "px";
+            lens.style.backgroundPosition = `-${(x * 2) - 50}px -${(y * 2) - 50}px`;
+        });
+
+        zoomArea.addEventListener("mouseleave", () => lens.style.display = "none");
+
+        function updateHearts() {
+            document.getElementById("hearts-display").innerText = "❤️".repeat(lives) + "🖤".repeat(6-lives);
+            document.getElementById("status-text").innerText = `${lives} VIDAS RESTANTES [80s-2025]`;
+            if(lives <= 0) endGame("GAME OVER");
+        }
+
+        function nextLevel() {
+            lives = 6; gameOver = false;
+            currentAnime = gameData[Math.floor(Math.random() * gameData.length)];
+            animeImg.src = currentAnime.img;
+            animeImg.style.imageRendering = "pixelated";
+            input.value = "";
+            document.getElementById("message").innerText = "";
+            updateHearts();
+        }
+
+        function checkGuess() {
+            if(gameOver) return;
+            if(input.value.toLowerCase() === currentAnime.name.toLowerCase()) {
+                gameOver = true;
+                document.getElementById("message").innerText = "¡CORRECTO!";
+                document.getElementById("message").style.color = "#4cd137";
+                animeImg.style.imageRendering = "auto";
+            } else {
+                lives--;
+                updateHearts();
+                input.value = "";
+                document.getElementById("message").innerText = "INCORRECTO";
+                document.getElementById("message").style.color = "#ff4757";
+            }
+        }
+
+        function endGame(msg) {
+            gameOver = true;
+            document.getElementById("message").innerText = msg;
+            animeImg.style.imageRendering = "auto";
+        }
+
+        window.onload = () => {
+            // Crear collage de fondo
+            const bg = document.getElementById("bg-collage");
+            for(let i=0; i<50; i++) {
+                const img = document.createElement("img");
+                img.src = gameData[i % gameData.length].img;
+                bg.appendChild(img);
+            }
+            nextLevel();
+        };
+    </script>
+</body>
+</html>
